@@ -661,12 +661,9 @@ add_action( 'rest_api_init', function () {
 $questionCompleted = array();
 
 function update_user_data( $request ) {
-  
-		$idUser = $request->get_param( 'id_user' );
-		//$idUser = 1;
-		update_user_completed($idUser, $request->get_param( 'coursesCompleted' ), $request->get_param( 'subjectCompleted' ), $request->get_param( 'questionCompleted' ), $request->get_param( 'lessonCompleted' ), $request->get_param('percentages'));
-		return get_users_object(array($idUser))[0];
-
+	$idUser = $request->get_param( 'id_user' );
+	update_user_completed($idUser, $request->get_param( 'coursesCompleted' ), $request->get_param( 'subjectCompleted' ), $request->get_param( 'questionCompleted' ), $request->get_param( 'lessonCompleted' ), $request->get_param('percentages'));
+	return get_users_object(array($idUser))[0];
 }
 
 function update_user_completed($idUser, $coursesCompleted, $subjectCompleted, $questionCompleted, $lessonCompleted, $percentages){
@@ -674,6 +671,7 @@ function update_user_completed($idUser, $coursesCompleted, $subjectCompleted, $q
 	  if(!learndash_course_completed($idUser, $c)){
 		update_user_meta(  $idUser, ('course_completed_' . $c), time());
 		learndash_process_mark_complete($idUser, $c);
+		// perform_refund($idUser, $c); return back!!!!!!!!!!!!!!!!!!!!!!!
 	  }
 	}
 	foreach($subjectCompleted as $s){
@@ -743,13 +741,9 @@ function set_questionCompleted($id_post,$id_user){
 }
 
 // function create_installation_zip($tozip, $zipfile) {
-// 	wp_mail('gittygimi@gmail.com', 'tozip', $tozip. ' '.$zipfile);
-
 // 	$zip = new ZipArchive();
 // 	if ($zip->open($zipfile, ZipArchive::OVERWRITE | ZipArchive::CREATE) === true) {
 // 		function zip_all($folder, $base, $ziparchive) {
-// 	wp_mail('gittygimi@gmail.com', 'zip_all', 'zip_all '. $ziparchive);
-
 // 		$options = ["remove_all_path" => true];
 // 		if ($folder != $base) { 
 // 		  $options["add_path"] = substr($folder, strlen($base));
@@ -762,18 +756,13 @@ function set_questionCompleted($id_post,$id_user){
 // 			}
 // 		}
 // 	  }
-// 	wp_mail('gittygimi@gmail.com', '3tozip', $tozip);
-
 // 	  zip_all($tozip, $tozip, $zip);
-// 	wp_mail('gittygimi@gmail.com', '4', '4');
 // 	  $zip->close();
 // 	}
 // }
 
 
 function zip_all($folder, $base, $ziparchive) {
-	error_log(date('d-m-Y H:i:s ', time()). " start zip_all folder-$folder");
-
     $options = ["remove_all_path" => true];
     if ($folder != $base) { 
         $options["add_path"] = substr($folder, strlen($base));
@@ -785,17 +774,21 @@ function zip_all($folder, $base, $ziparchive) {
             zip_all($f."/", $base, $ziparchive);
         }
     }
-	error_log(date('d-m-Y H:i:s ', time()). " finish zip_all");
-
 }
 
 function create_installation_zip($tozip, $zipfile) {
-	error_log(date('d-m-Y H:i:s ', time()). " start create_installation_zip");
 	try {
     	$zip = new ZipArchive();
 		if ($zip->open($zipfile, ZipArchive::OVERWRITE | ZipArchive::CREATE) === true) {
 			zip_all($tozip, $tozip, $zip);
-			$zip->close();
+			if ($zip->close()) {
+				error_log(date('d-m-Y H:i:s ', time()). " zip file closed successfully");
+			} else {
+				error_log(date('d-m-Y H:i:s ', time()). " failed to close zip file");
+			}
+		}
+		else {
+			error_log(date('d-m-Y H:i:s ', time()). " failed to open zip file: $zipfile");
 		}
 		error_log(date('d-m-Y H:i:s ', time()). " finish create_installation_zip");
 	}
@@ -903,20 +896,15 @@ function get_courses_ids_for_learn_path_api($data) {
 }
 
 function download_software(){
-
 	$users_ids = get_users_ids();
-
 	$users_download = get_users_object($users_ids);
-
 	$object_ids_for_all_users = get_all_ids_by_users($users_ids);
-
 	$knowledge_object = get_knowledges_object($object_ids_for_all_users['knowledges']);
 	$learn_path_object = get_learn_path_object($object_ids_for_all_users['path_ids']);
     $courses_object = get_courses_object($object_ids_for_all_users['courses_ids']);
     $subjects_object = get_subjects_object($object_ids_for_all_users['subject_ids']);
     $lessons_object = get_lessons_object($object_ids_for_all_users['lessons_ids']);
     $questionnaire_object = get_questionnaire_object($object_ids_for_all_users['questionnaire_all_ids']);
-
 	$learn_path_object = empty($learn_path_object) ? (object) array() : $learn_path_object;
 	$main_json = array(
 		"users" => $users_download,
@@ -927,9 +915,7 @@ function download_software(){
       	"lessons" => $lessons_object,
       	"questionnaire" => $questionnaire_object,
 	);
-
 	// sanitize_filenames($main_json);
-
 	$user_mail = get_userdata(get_current_user_id())->user_email;
     $subject = 'התקנת אשכולות אופליין';
     $data_link = create_folders_for_download_software($object_ids_for_all_users['courses_ids'], $object_ids_for_all_users['questionnaire_all_ids'], $main_json);
@@ -946,7 +932,6 @@ function download_software(){
 	$user_mail = 'gittygimi@gmail.com'; // delete!!!
     wp_mail($user_mail, $subject, $message, array('Content-Type: text/html; charset=UTF-8'));
   	die();
-
 }
 
 function sanitize_filenames(&$data) {
@@ -1174,25 +1159,13 @@ function create_folders_for_download_software($courses_ids, $questionnaire_ids, 
 	$data_path = get_or_create_folder($folder_path . 'data/');
 
 	downloda_zip_courses($courses_ids);
-error_log(date('d-m-Y H:i:s ', time()). " finish downloda_zip_courses");
-	copy_lessons_course_folder($courses_ids, $lesson_path); // delete: כאן יש בעיה, כשלא מצליח להעתיק תיקיה, הפונקציה עפה ולא ממשיכה בלולאה ולא חוזרת לפה
-	error_log(date('d-m-Y H:i:s ', time()). " after copy_lessons_course_folder");
-
+	copy_lessons_course_folder($courses_ids, $lesson_path);
 	create_quizs_folder($quizzes_path, $quiz_path, $questionnaire_ids);
-	error_log(date('d-m-Y H:i:s ', time()). " after create_quizs_folder");
-
 	file_put_contents($data_path . "download_software.json", json_encode($main_json));
-	error_log(date('d-m-Y H:i:s ', time()). " after file_put_contents");
-
 	copy('../wp-content/plugins/Personal area/eshkolot_setup.exe', $folder_path .'eshkolot_setup.exe');
-	error_log(date('d-m-Y H:i:s ', time()). " after copy setup.exe");
-
 	copy_directory($icons_path, $folder_path . 'icons');
-	error_log(date('d-m-Y H:i:s ', time()). " after copy_directory");
-
 	create_installation_zip($folder_path, $installation_path . $file_name);
 	error_log(date('d-m-Y H:i:s ', time()). " after create_installation_zip");
-
 	$file_renamed = str_replace(".zip", ".eshkolot", $file_name);
 	rename($installation_path . $file_name, $installation_path . $file_renamed);
 	$link = str_replace(" ", "%20", str_replace("../wp-content", "https://eshkolot.net/wp-content", $installation_path)) . $file_renamed;
@@ -1204,24 +1177,16 @@ function downloda_zip_courses($courses_ids){
 	foreach ($courses_ids as $id) {
 		downloadZip('../wp-content/plugins/Personal area/download softwer/lessons/', $id.'.zip');
 	}
-
 }
 
 function copy_lessons_course_folder($courses_ids, $lesson_path) {
-error_log(date('d-m-Y H:i:s ', time()). " start copy_lessons_course_folder");
-error_log(date('d-m-Y H:i:s ', time()). " courses_ids: ". json_encode($courses_ids));
-
     foreach ($courses_ids as $id) {
 		$source = plugin_dir_path(__FILE__) . "courses_videos/" . $id . '.zip';
 		$destination = $lesson_path . $id . '.zip';
 		if (file_exists($source)) {
 			$result = copy($source, $destination);
-error_log(date('d-m-Y H:i:s ', time()). " copy_lessons_course_folder: id-$id, result-$result");
-break;
 		}
     }
-error_log(date('d-m-Y H:i:s ', time()). " finish copy_lessons_course_folder");
-
 }
 
 function get_ID_user($id_user){
@@ -1316,9 +1281,7 @@ function get_courses_object($courses_ids){
 			"brief_information"=> get_post_meta($id,'brief-information', true),
 			);
 	}
-
 	return $courses_object;
-	
 }
 
 function get_subjects_object($subject_ids) {
@@ -1647,7 +1610,6 @@ function fix_quiz_urls($quiz_urls){
 	return $fixed_urls;
 }
 
-
 function get_url_to_download(){
 	if(empty(get_user_meta(get_current_user_id(), 'children', true))){
         echo '/%D7%90%D7%A9%D7%9B%D7%95%D7%9C%D7%95%D7%AA-%D7%90%D7%95%D7%A4%D7%9C%D7%99%D7%99%D7%9F/';
@@ -1657,6 +1619,47 @@ function get_url_to_download(){
     }
 }
 add_shortcode('get_url_to_download', 'get_url_to_download');
+
+function perform_refund($idUser, $course_id) {
+	$price = get_post_meta($course_id, '_price', true);
+	$refund = get_user_meta($idUser, 'refund_' . $course_id, true);
+	$authnr = get_user_meta($idUser, 'authnr_' . $course_id, true);
+	$TranzilaTK = get_user_meta($idUser, 'TranzilaTK_' . $course_id, true);
+	$expdate = get_user_meta($idUser, 'expdate_' . $course_id, true);
+	
+	error_log("perform_refund course_id-$course_id, price-$price, authnr-$authnr, TranzilaTK-$TranzilaTK, expdate-$expdate, refund-$refund");
+	if(!$refund) {
+		$tranzila_pay = new Tranzila_Payment();
+
+		$payment_data = array(
+		  'sum' => $price,
+		  'authnr' => $authnr,
+		  'TranzilaTK' => $TranzilaTK,
+		  'expdate' => $expdate
+		);
+		
+		$result = $tranzila_pay->create_credit_transaction($payment_data);
+		if ($result == '???') { // לבדוק מה חוזר
+			update_user_meta($idUser, 'refund_' . $course_id, true);
+		}
+	}
+}
+
+add_action('wp_ajax_add_download_action', 'add_download_action');
+add_action('wp_ajax_nopriv_add_download_action', 'add_download_action');
+
+function add_download_action() {
+	$uids = get_users_ids();
+	$uids = implode(", ", $uids);
+
+	$new_post = array(
+		'post_type'     => 'download_requests',
+        'post_title'    => 'download_action',
+        'post_content'  => $uids,
+        'post_status'   => 'publish'
+    );
+    $post_id = wp_insert_post($new_post);
+}
 
 
 ?>
