@@ -1,4 +1,5 @@
 jQuery(document).ready(function ($) {
+    deleteCookies();
     var numChildren = childrenObj.length;
     var title = ['עריכת פרטים כללים', ('פרטי ילדים - משפחת ' + last_name + ' ' + year), 'רכישת קורסים ומסלולים למשפחת' + ' ' + last_name + ' ' + year];
     var total = 0;
@@ -23,7 +24,9 @@ jQuery(document).ready(function ($) {
         setNonDisable($('#next_edit_details'))
         eval('nextEditDetails' + String(frameIndex))();
         generalEditDetails();
-        frameIndex++;
+        if (frameIndex < 3) {
+          frameIndex++;
+        }
       }
       else {
         setDisable($('#next_edit_details'));
@@ -35,26 +38,51 @@ jQuery(document).ready(function ($) {
                 $('.agree').css('border', '1px solid red');
             break;
           }
+          case 3:{
+            alert('יש לבחור קורס');
+          }
         }
       }
     });
       
-      initDetails();
+    initDetails();
   
-  //   $(document).on('click', ".icon_cls", function (event) {
-  //     frameIndex = $(this).data('index');
-  //     generalEditDetails();
-  //   });
+    $(document).on('click', ".icon_cls", function (event) {
+      iconIndex = $(this).data('index');
+      if (iconIndex < frameIndex) {
+        if (iconIndex + 2 == frameIndex) {
+          frameIndex = iconIndex;
+        }
+        else {
+          frameIndex = iconIndex + 1;
+        }
+        jQuery('#previous_edit_details').click();
+      }
+      else {
+        frameIndex = iconIndex - 1;
+        jQuery('#next_edit_details').click();
+      }
+    });
   
     function generalEditDetails(prev = false) {
       $('.present_icon').removeClass("present_icon");
-      $('#edit_details_' + frameIndex).hide();
+      hideDetailsElements();
+      $("#next_edit_details").html("המשך ←");
       if (prev) {
-        $('#edit_details_' + (frameIndex - 1)).show();
+        if (frameIndex == 1) {
+          $('#edit_details_' + (frameIndex)).show();
+          $($('.icon_cls')[frameIndex-1]).addClass("present_icon");
+        }
+        else {
+          $('#edit_details_' + (frameIndex - 1)).show();
+          $($('.icon_cls')[frameIndex - 2]).addClass("present_icon");
+        }
         $('#title_set').html(title[frameIndex - 2]);
-        $($('.icon_cls')[frameIndex - 2]).addClass("present_icon");
       }
       else {
+        if (frameIndex == 2) {
+          $("#next_edit_details").html("לסל הקניות");
+        }
         $('#edit_details_' + (frameIndex + 1)).show();
         $('#title_set').html(title[frameIndex]);
         $($('.icon_cls')[frameIndex]).addClass("present_icon");
@@ -99,9 +127,9 @@ jQuery(document).ready(function ($) {
       $('#all').addClass('active');
       propChecked('all', courseAllChildren);
       $('.child_lst').attr('style', 'display: none;');
-      if (!prev) {
-        $("#next_edit_details").html("לסל הקניות");
-      }
+      // if (!prev) {
+      //   $("#next_edit_details").html("לסל הקניות");
+      // }
       setDisable($("#next_edit_details"));
     };
   
@@ -115,7 +143,9 @@ jQuery(document).ready(function ($) {
   
     $(document).on('click', "#previous_edit_details", function (event) {
       generalEditDetails(true);
-      frameIndex--;
+      if (frameIndex > 2) {
+        frameIndex--;
+      }
       if (frameIndex <= 1) {
         $('#previous_edit_details').attr('style', 'display: none;');
         $('.closeBtn').show();
@@ -124,7 +154,6 @@ jQuery(document).ready(function ($) {
         if (frameIndex == 2) {
           saveSelectedCourses();
         }
-        $("#next_edit_details").html("המשך ←");
         $("#next_edit_details").css('background-color', '#2D2828');
         $("#next_edit_details").css('color', '#FFF');
         eval('nextEditDetails' + String(frameIndex))(true);
@@ -323,9 +352,14 @@ jQuery(document).ready(function ($) {
     function saveSelectedCourses() {
       if (getChoiceType() == 'all') {
         courseAllChildren = getCheckedCourses('all');
+        for(const key in childrenObj) {
+          childrenObj[key]['courses'] = courseAllChildren;
+        }
       }
       else {
-        coursePerChild[String($('.child_now').data('id'))] = getCheckedCourses('adapted');
+        currentChildId = String($('.child_now').data('id'));
+        coursePerChild[currentChildId] = getCheckedCourses('adapted');
+        childrenObj[currentChildId]['courses'] = coursePerChild[currentChildId];
       }
     }
   
@@ -345,7 +379,7 @@ jQuery(document).ready(function ($) {
     });
   
     $(document).on('click', '.courses_list input[type=checkbox]', function () {
-      if (getCheckedCourses('all').length || getCheckedCourses('adapted').length || courseAllChildren.length || isSelectedCourseForChild()){
+      if (getCheckedCourses('all').length || getCheckedCourses('adapted').length){
         $('#lbl_added').fadeIn("slow");
         setNonDisable($('#next_edit_details'));
       }
@@ -353,6 +387,7 @@ jQuery(document).ready(function ($) {
         $('#lbl_added').fadeOut("slow");
         setDisable($('#next_edit_details'));
       }
+      saveSelectedCourses();
     });
   
     function shoppingCart() {
@@ -382,7 +417,6 @@ jQuery(document).ready(function ($) {
     }
   
     function createShoppingCartTable(id, forWhom, count) {
-      deleteCookies();
       course = $('.courses_list div[data-id="' + id + '"]');
       courseName = course.data('name');
       coursePrice = course.data('price');
@@ -487,7 +521,8 @@ jQuery(document).ready(function ($) {
           break;
         }
         case 3: {
-          validation = $('#edit_details_3 input[type=checkbox]:checked').length > 0;
+          validation = is_buyed();
+          // validation = $('#edit_details_3 input[type=checkbox]:checked').length > 0;
           break;
         }
       }
@@ -603,14 +638,6 @@ jQuery(document).ready(function ($) {
       $(this).hide();//remove???
     });
   
-    function isSelectedCourseForChild(){
-      for(const key in coursePerChild) {
-        if (coursePerChild[key].length)
-          return true;
-      }
-      return false;
-    }
-  
     function setCourses(){
       finalCourses = {};
       for(const key in childrenObj) {
@@ -643,33 +670,53 @@ jQuery(document).ready(function ($) {
     }
   
     function getChoiceType(){
-     return $($('.course_header div[class="active"]').get(0)).attr('id');
+      return $($('.course_header div[class="active"]').get(0)).attr('id');
     }
       
-      function initDetails(){
-          index = getQueryIndex();
-          if (typeof index !== 'undefined' && index !== null && (index == 2 || index == 3)){
-              for(let i = 1; i < index; i++){
-                  frameIndex = i;
-                  jQuery('#next_edit_details').click();
-              }
-          }
+    function initDetails(index = ''){
+      if (index == '') index = getQueryIndex();
+      if (typeof index !== 'undefined' && index !== null) {
+        if (index == 1) {
+          frameIndex = 2;
+          jQuery('#previous_edit_details').click();
+        }
+        else {
+          frameIndex = index - 1;
+          jQuery('#next_edit_details').click();
+        }
       }
+    }
       
-      function getQueryIndex(){
-          const queryString = window.location.search;
-          const urlParams = new URLSearchParams(queryString);
-          const index = urlParams.get('index');
-          return index;
-      }
+    function getQueryIndex(){
+      const queryString = window.location.search;
+      const urlParams = new URLSearchParams(queryString);
+      const index = urlParams.get('index');
+      return index;
+    }
 
-      function deleteCookies() {
-        const cookies = document.cookie.split(';');
-        cookies.forEach(function(cookie) {
-          const cookieName = cookie.split('=')[0].trim();              
-          if (cookieName.includes('shopping_offline_') || cookieName.includes('offline_private_details_')) {
-            setCookie(cookieName, '', -1);
-          }
-        });
+    function deleteCookies() {
+      const cookies = document.cookie.split(';');
+      cookies.forEach(function(cookie) {
+        const cookieName = cookie.split('=')[0].trim();              
+        if (cookieName.includes('shopping_offline_') || cookieName.includes('offline_private_details_')) {
+          setCookie(cookieName, '', -1);
+        }
+      });
+    }
+
+    function is_buyed() {
+      for(const key in childrenObj) {
+        if (childrenObj[key]['courses'].length > 0) {
+          return true;
+        }
       }
+      return false;
+    }
+
+    function hideDetailsElements() {
+      for(i=1; i<=4; i++) {
+        $('#edit_details_' + i).hide();
+      }
+    }
 });
+
