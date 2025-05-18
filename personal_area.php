@@ -895,8 +895,7 @@ function get_courses_ids_for_learn_path_api($data) {
 
 }
 
-function download_software(){
-	$users_ids = get_users_ids();
+function download_software($users_ids){
 	$users_download = get_users_object($users_ids);
 	$object_ids_for_all_users = get_all_ids_by_users($users_ids);
 	$knowledge_object = get_knowledges_object($object_ids_for_all_users['knowledges']);
@@ -930,8 +929,9 @@ function download_software(){
 
     $message = '<div style="direction: rtl;">' . $message . '</div>';
 	$user_mail = 'gittygimi@gmail.com'; // delete!!!
-    wp_mail($user_mail, $subject, $message, array('Content-Type: text/html; charset=UTF-8'));
-  	die();
+    $result = wp_mail($user_mail, $subject, $message, array('Content-Type: text/html; charset=UTF-8'));
+	return $result;
+  	// die();
 }
 
 function sanitize_filenames(&$data) {
@@ -1639,7 +1639,7 @@ function perform_refund($idUser, $course_id) {
 		);
 		
 		$result = $tranzila_pay->create_credit_transaction($payment_data);
-		if ($result == '???') { // לבדוק מה חוזר
+		if ($result['result'] == '1') {
 			update_user_meta($idUser, 'refund_' . $course_id, true);
 		}
 	}
