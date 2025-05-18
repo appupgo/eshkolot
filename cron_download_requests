@@ -1,0 +1,40 @@
+<?php
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+define('WP_USE_THEMES', false);
+require_once("../../../wp-load.php");
+
+function download_requests() {
+    echo 'start download_requests: <br>';
+    $args = array(
+        'post_type'      => 'download_requests',
+        'posts_per_page' => 1,
+        'post_status'    => 'publish',
+        'fields'         => 'ids',
+    );
+    
+    $query = new WP_Query($args);
+    
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
+            $uids = get_the_content();
+            echo "uids-$uids, post_Id-".get_the_ID().'<br>';
+            $uids = explode(",", $uids);
+            $result = download_software($uids);
+            echo $result;
+            if ($result) {
+                wp_delete_post(get_the_ID(), true);
+            }
+        }
+    } else {
+        echo 'לא נמצאו פוסטים.';
+    }
+}
+
+download_requests();
+
+?> 
