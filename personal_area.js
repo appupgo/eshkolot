@@ -11,18 +11,44 @@ jQuery(document).ready(function ($) {
 			$(this).parents('tr').next().toggle();
 	});
 
+  // jQuery(document).on('click',"#download, #download_user",function(event) {
+  //   var user = [];
+  //   if(jQuery(this).is('#download_user')){
+  //     user = [jQuery(this).parents('.expan_child').prev().data('id')];
+  //   }
+  //   alert('התוכנה תשלח אליך למייל תוך מספר דקות');
+	//   jQuery.ajax({
+  //     type: 'POST',
+  //     url: "/wp-admin/admin-ajax.php?cloudflare=true",
+  //     dataType: 'text',
+  //     data: {
+  //         action: 'download_software',
+  //         nonce: 'ajax-nonce',
+  //         user: user,
+  //         event: jQuery(this).attr('id')
+  //     },
+  //     success: function(response){
+  //     },
+  //     error: function(jqXHR, textStatus, errorThrown){
+  //       console.log(jqXHR);
+  //       console.log(textStatus);
+  //       console.log(errorThrown);
+  //     }
+  //   });
+  // });
+
   jQuery(document).on('click',"#download, #download_user",function(event) {
     var user = [];
     if(jQuery(this).is('#download_user')){
       user = [jQuery(this).parents('.expan_child').prev().data('id')];
     }
-    alert('התוכנה תשלח אליך למייל תוך מספר דקות');
+    alert('התוכנה תשלח אליך למייל תוך מספר דקות :)');
 	  jQuery.ajax({
       type: 'POST',
-      url: "/wp-admin/admin-ajax.php?cloudflare=true",
+      url: "/wp-admin/admin-ajax.php",
       dataType: 'text',
       data: {
-          action: 'download_software',
+          action: 'add_download_action',
           nonce: 'ajax-nonce',
           user: user,
           event: jQuery(this).attr('id')
@@ -34,7 +60,7 @@ jQuery(document).ready(function ($) {
         console.log(textStatus);
         console.log(errorThrown);
       }
-    });		
+    });
   });
 
   function downloadFileWithNewExtension(url, fileName) {
