@@ -671,7 +671,7 @@ function update_user_completed($idUser, $coursesCompleted, $subjectCompleted, $q
 	  if(!learndash_course_completed($idUser, $c)){
 		update_user_meta(  $idUser, ('course_completed_' . $c), time());
 		learndash_process_mark_complete($idUser, $c);
-		// perform_refund($idUser, $c); return back!!!!!!!!!!!!!!!!!!!!!!!
+		perform_refund($idUser, $c);
 	  }
 	}
 	foreach($subjectCompleted as $s){
@@ -682,7 +682,7 @@ function update_user_completed($idUser, $coursesCompleted, $subjectCompleted, $q
 	}
 
 	foreach($lessonCompleted as $l){
-		  learndash_process_mark_complete($idUser, $l);
+		learndash_process_mark_complete($idUser, $l);
 	}
 
 	$quiz_meta = get_user_meta($idUser, '_sfwd-quizzes',true);
@@ -928,7 +928,10 @@ function download_software($users_ids){
            $install_link. '<br>';
 
     $message = '<div style="direction: rtl;">' . $message . '</div>';
-	$user_mail = 'gittygimi@gmail.com'; // delete!!!
+	//delete:
+	$user_mail = 'gittygimi2@gmail.com'; // delete!!!
+    $result = wp_mail($user_mail, $subject, $message, array('Content-Type: text/html; charset=UTF-8'));
+	$user_mail = 'rivki.cholak@gmail.com'; // delete!!!
     $result = wp_mail($user_mail, $subject, $message, array('Content-Type: text/html; charset=UTF-8'));
 	return $result;
   	// die();
@@ -1626,16 +1629,17 @@ function perform_refund($idUser, $course_id) {
 	$authnr = get_user_meta($idUser, 'authnr_' . $course_id, true);
 	$TranzilaTK = get_user_meta($idUser, 'TranzilaTK_' . $course_id, true);
 	$expdate = get_user_meta($idUser, 'expdate_' . $course_id, true);
+	$index = get_user_meta($idUser, 'index_' . $course_id, true);
 	
-	error_log("perform_refund course_id-$course_id, price-$price, authnr-$authnr, TranzilaTK-$TranzilaTK, expdate-$expdate, refund-$refund");
-	if(!$refund) {
+	if($refund == false) {
 		$tranzila_pay = new Tranzila_Payment();
 
 		$payment_data = array(
 		  'sum' => $price,
 		  'authnr' => $authnr,
 		  'TranzilaTK' => $TranzilaTK,
-		  'expdate' => $expdate
+		  'expdate' => $expdate,
+		  'index' => $index
 		);
 		
 		$result = $tranzila_pay->create_credit_transaction($payment_data);
