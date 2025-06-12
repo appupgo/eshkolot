@@ -382,9 +382,26 @@ function menu_icons()
 }
 
 add_action('elementor_pro/forms/new_record', function ($record, $handler) {
+
+  ////delete:!!
+  $to = 'gittygimi@gmail.com';
+$headers = array('Content-Type: text/html; charset=UTF-8');
+  ////
   $user_id = get_current_user_id();
+$subject = 'user_id';//
+$message = $user_id;//
+wp_mail($to, $subject, $message, $headers);//
+
   $cookie_name = (get_user_meta($user_id, 'user_type', true) == 'organization') ? 'offline_organization_details_' : 'offline_private_details_';
+  $subject = 'cookie_name';//
+$message = $cookie_name;//
+wp_mail($to, $subject, $message, $headers);//
   $details = decode_cookie($_COOKIE[$cookie_name . $user_id]);
+
+  $subject = 'details';//
+$message = print_r($details, true);//
+wp_mail($to, $subject, $message, $headers);//
+
   $form_name = $record->get_form_settings('form_name');
   if ('form_offline_payment' !== $form_name) {
     return;
@@ -395,6 +412,11 @@ add_action('elementor_pro/forms/new_record', function ($record, $handler) {
     $fields[$id] = $field['value'];
   }
   $tranzila_result = create_tranzila($fields, $details, $user_id);
+
+  
+  $subject = 'tranzila_result';//
+$message = print_r($tranzila_result, true);//
+wp_mail($to, $subject, $message, $headers);//
   if ($tranzila_result['Response'] == '000') {
     create_order($fields, $user_id);
     create_or_update_users($details, $user_id, $tranzila_result);
@@ -422,7 +444,7 @@ function create_tranzila($fields, $details, $user_id)
     'ccno' => $fields['card_number'],
     'expdate' => $expdate
   );
-  $TranzilaTK = $tranzila_pay->create_token($payment_data);
+  $TranzilaTK = $tranzila_pay->create_token($payment_data, true);
   $result_assoc['TranzilaTK'] = $TranzilaTK;
   error_log("result_assoc: ". print_r($result_assoc, true));
   return $result_assoc;
@@ -461,7 +483,15 @@ function create_order($fields, $user_id)
 
 function create_or_update_users($details, $user_id, $tranzila_result)
 {
+  ////delete:!!
+  $to = 'gittygimi@gmail.com';
+  $headers = array('Content-Type: text/html; charset=UTF-8');
+  ////
   $user_type = get_user_meta($user_id, 'user_type', true);
+
+  $subject = 'user_type1111'; //
+  $message = $user_type;//
+  wp_mail($to, $subject, $message, $headers);//
   if ($user_type == 'private') {
     create_or_update_children($details, $user_id, $tranzila_result);
   } 
@@ -546,6 +576,7 @@ function create_or_update_children($details, $user_id, $tranzila_result)
       update_user_meta($child_id, 'authnr_' . $selected_courses[$i], $tranzila_result['ConfirmationCode']);
       update_user_meta($child_id, 'TranzilaTK_' . $selected_courses[$i], $tranzila_result['TranzilaTK']);
       update_user_meta($child_id, 'expdate_' . $selected_courses[$i], $tranzila_result['expdate']);
+      update_user_meta($child_id, 'index_' . $selected_courses[$i], $tranzila_result['index']);
 
     }
     update_user_meta($child_id, 'age', $value->age);
@@ -751,6 +782,7 @@ function set_children_obj(){
       $childrenObj[$child_index]['is_saved'] = true; 
     }
   }
+  error_log("CCCCCC ". print_r($childrenObj, true));
   return $childrenObj;
 }
 
