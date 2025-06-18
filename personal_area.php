@@ -119,7 +119,7 @@ function personal_area(){
     $html_all_child_obj = get_html_all_child($user_type);
 
     $isCourses = $html_all_child_obj["isCourses"];
-	$html .= '<div class="title-container">';
+	$html .= '<div class="title-container" style="display: flex;flex-direction: column;">';
 	$last_name_label = '';
 		$last_name_label = 'משפחת ' . $user_info->last_name;
 	if(!empty($user_info->last_name))
@@ -175,20 +175,13 @@ function personal_area(){
 // 			</svg>
 
 function get_html_all_child($user_type) {
-    
     $html = '';
-
 	$group_name = ($user_type == 'organization') ? get_group_name() : '';
 	$all_child = ($user_type == 'private') ? get_children_for_parent(get_current_user_id()) : get_students_ids($group_name);
-
 	$i = 0;
 	$users_object = get_users_object($all_child);
-
-
-	
     $isCourses = false;
 	foreach($users_object as $child){
-			
 		$child_id = $child['id'];
 		$child_object = get_userdata($child_id);
 		$ID = $child['tz'];
@@ -740,28 +733,6 @@ function set_questionCompleted($id_post,$id_user){
     }
 }
 
-// function create_installation_zip($tozip, $zipfile) {
-// 	$zip = new ZipArchive();
-// 	if ($zip->open($zipfile, ZipArchive::OVERWRITE | ZipArchive::CREATE) === true) {
-// 		function zip_all($folder, $base, $ziparchive) {
-// 		$options = ["remove_all_path" => true];
-// 		if ($folder != $base) { 
-// 		  $options["add_path"] = substr($folder, strlen($base));
-// 		}
-// 		$ziparchive->addGlob($folder."*.*", GLOB_BRACE, $options);
-// 		$folders = glob($folder . "*", GLOB_ONLYDIR);
-// 		if (count($folders)!=0){ 
-// 			foreach ($folders as $f) {
-// 		  		zip_all($f."/", $base, $ziparchive);
-// 			}
-// 		}
-// 	  }
-// 	  zip_all($tozip, $tozip, $zip);
-// 	  $zip->close();
-// 	}
-// }
-
-
 function zip_all($folder, $base, $ziparchive) {
     $options = ["remove_all_path" => true];
     if ($folder != $base) { 
@@ -776,25 +747,27 @@ function zip_all($folder, $base, $ziparchive) {
     }
 }
 
-function create_installation_zip($tozip, $zipfile) {
-	try {
-    	$zip = new ZipArchive();
-		if ($zip->open($zipfile, ZipArchive::OVERWRITE | ZipArchive::CREATE) === true) {
-			zip_all($tozip, $tozip, $zip);
-			if ($zip->close()) {
-				error_log(date('d-m-Y H:i:s ', time()). " zip file closed successfully");
-			} else {
-				error_log(date('d-m-Y H:i:s ', time()). " failed to close zip file");
-			}
-		}
-		else {
-			error_log(date('d-m-Y H:i:s ', time()). " failed to open zip file: $zipfile");
-		}
-		error_log(date('d-m-Y H:i:s ', time()). " finish create_installation_zip");
-	}
-	catch (Exception $e) {
-		error_log(date('d-m-Y H:i:s ', time()). " error create_installation_zip ". $e->getMessage());
-	}
+
+function create_installation_zip($source, $destination) {
+	if (!extension_loaded('zip') || !file_exists($source)) {
+        return false;
+    }
+	$zip = new ZipArchive();
+    if ($zip->open($destination, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== TRUE) {
+        return false;
+    }
+	$source = realpath($source);
+    if (is_dir($source)) {
+        $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($source), RecursiveIteratorIterator::LEAVES_ONLY);
+        foreach ($files as $name => $file) {
+            if (!$file->isDir()) {
+                $filePath = $file->getRealPath();
+				$relativePath = substr($filePath, strlen($source) + 1);
+                $result = $zip->addFile($filePath, $relativePath);
+            }
+        }
+    }
+    return $zip->close();
 }
 
 function get_or_create_folder($folder_path){
@@ -895,7 +868,7 @@ function get_courses_ids_for_learn_path_api($data) {
 
 }
 
-function download_software($users_ids){
+function download_software($users_ids, $user_id){
 	$users_download = get_users_object($users_ids);
 	$object_ids_for_all_users = get_all_ids_by_users($users_ids);
 	$knowledge_object = get_knowledges_object($object_ids_for_all_users['knowledges']);
@@ -914,11 +887,11 @@ function download_software($users_ids){
       	"lessons" => $lessons_object,
       	"questionnaire" => $questionnaire_object,
 	);
-	// sanitize_filenames($main_json);
-	$user_mail = get_userdata(get_current_user_id())->user_email;
+	$user_mail = get_userdata($user_id)->user_email;
     $subject = 'התקנת אשכולות אופליין';
-    $data_link = create_folders_for_download_software($object_ids_for_all_users['courses_ids'], $object_ids_for_all_users['questionnaire_all_ids'], $main_json);
-    $install_link = 'https://eshkolot.net/wp-content/plugins/Personal%20area/install.bat';
+    $data_link = create_folders_for_download_software($user_id, $object_ids_for_all_users['courses_ids'], $object_ids_for_all_users['questionnaire_all_ids'], $main_json);
+	$data_link = 'https://eshkolot.net/wp-content/plugins/Personal%20area/' . $data_link;   
+	$install_link = 'https://eshkolot.net/wp-content/plugins/Personal%20area/install.bat';
 
     $message = '<h1 style="font-weight: bold;">תוכנת אשכולות אופליין</h1>' .
            'כדי להתקין את התוכנה, לחצי על 2 הקישורים הבאים ככה שירדו אליך למחשב 2 קבצים.<br>' .
@@ -928,13 +901,8 @@ function download_software($users_ids){
            $install_link. '<br>';
 
     $message = '<div style="direction: rtl;">' . $message . '</div>';
-	//delete:
-	$user_mail = 'gittygimi2@gmail.com'; // delete!!!
-    $result = wp_mail($user_mail, $subject, $message, array('Content-Type: text/html; charset=UTF-8'));
-	$user_mail = 'rivki.cholak@gmail.com'; // delete!!!
     $result = wp_mail($user_mail, $subject, $message, array('Content-Type: text/html; charset=UTF-8'));
 	return $result;
-  	// die();
 }
 
 function sanitize_filenames(&$data) {
@@ -956,22 +924,17 @@ function get_users_object($users_ids) {
 	$users_download = array();
 
 	foreach($users_ids as $id_user){
-
 		$knowledgeIds_user = array();
 		$path_ids_user = array();
 		$courses_ids = array();
 		$user_courses_data = array();
-
 		$subjectCompleted = array();
 		$questionCompleted = array();
 		$lessonCompleted = array();
-
 		$user = get_userdata($id_user);
-
 		$products = get_user_meta($id_user, 'product_offline')[0];		
 
 		foreach ($products as $product) {
-
 			$id_prod = $product['id'];
 			$details_prod = get_courses_and_paths_product($id_prod);
 
@@ -1142,37 +1105,27 @@ function get_users_ids() {
 
 }
 
-function create_folders_for_download_software($courses_ids, $questionnaire_ids, $main_json){
-	$software_path = get_or_create_folder("../wp-content/plugins/Personal area/download software/");
-	$installation_path = get_or_create_folder("../wp-content/plugins/Personal area/installation-zip/");
-	$quizzes_path = get_or_create_folder("../wp-content/plugins/Personal area/quizzes-zip/");
+function create_folders_for_download_software($user_id, $courses_ids, $questionnaire_ids, $main_json){
+	$timestamp = time();
+	$software_path = get_or_create_folder("download software/");
+	$installation_path = get_or_create_folder("installation-zip/$user_id/$timestamp/");
+	$quizzes_path = get_or_create_folder("quizzes-zip/");
 	$icons_path = get_or_create_folder(dirname(__FILE__)."/icons/");
-
-	if (empty($_POST['user'])){
-		$folder_path = get_or_create_folder($software_path . get_current_user_id() . '_' . time() . "/");
-		$file_name = get_current_user_id() . '_' . time() . '.zip';
-	}
-	else {
-		$folder_path = get_or_create_folder($software_path . $_POST['user'][0] . '_' . time() . "/");
-		$file_name = $_POST['user'][0] . '_' . time() . '.zip';
-	}
-
+	$folder_path = get_or_create_folder($software_path . $user_id . "/$timestamp/");
+	$file_name = 'installation.zip';
 	$lesson_path = get_or_create_folder($folder_path . 'lessons/');
 	$quiz_path = get_or_create_folder($folder_path . 'quiz/');
 	$data_path = get_or_create_folder($folder_path . 'data/');
-
 	downloda_zip_courses($courses_ids);
 	copy_lessons_course_folder($courses_ids, $lesson_path);
 	create_quizs_folder($quizzes_path, $quiz_path, $questionnaire_ids);
 	file_put_contents($data_path . "download_software.json", json_encode($main_json));
-	copy('../wp-content/plugins/Personal area/eshkolot_setup.exe', $folder_path .'eshkolot_setup.exe');
+	copy('/var/www/eshkolot_org/wp-content/plugins/Personal area/eshkolot_setup.exe', $folder_path .'eshkolot_setup.exe');
 	copy_directory($icons_path, $folder_path . 'icons');
 	create_installation_zip($folder_path, $installation_path . $file_name);
-	error_log(date('d-m-Y H:i:s ', time()). " after create_installation_zip");
 	$file_renamed = str_replace(".zip", ".eshkolot", $file_name);
 	rename($installation_path . $file_name, $installation_path . $file_renamed);
 	$link = str_replace(" ", "%20", str_replace("../wp-content", "https://eshkolot.net/wp-content", $installation_path)) . $file_renamed;
-
 	return $link;
 }
 
@@ -1655,6 +1608,7 @@ add_action('wp_ajax_nopriv_add_download_action', 'add_download_action');
 function add_download_action() {
 	$uids = get_users_ids();
 	$uids = implode(", ", $uids);
+	$user_id = get_current_user_id();
 
 	$new_post = array(
 		'post_type'     => 'download_requests',
@@ -1663,7 +1617,7 @@ function add_download_action() {
         'post_status'   => 'publish'
     );
     $post_id = wp_insert_post($new_post);
+
+	add_post_meta($post_id, 'user_id', $user_id, true);
 }
-
-
 ?>
