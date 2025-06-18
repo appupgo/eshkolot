@@ -137,7 +137,7 @@ jQuery(document).ready(function ($) {
           saveOrganizationDetails(groupId);
           saveGeneralDetailsInCookie(groupId);
           saveStudentsDetailsInCookie(groupId);
-          delCookie(`shopping_offline_${user_id}_${groupId}_`);
+          // delCookie(`shopping_offline_${user_id}_${groupId}_`);
           saveCoursesDetails(groupId, true);
           alertNoCoursesSelected(groupId);
           shoppingCart();
@@ -221,6 +221,7 @@ jQuery(document).ready(function ($) {
         break;
       }
     }
+    return true;//delete!!!!!!!!
     return validation;
   }
 
@@ -718,8 +719,10 @@ jQuery(document).ready(function ($) {
   });
 
   $(document).on('click', '.popupGroupDetails, .popupEditStudent, .popupAddStudent, .popupAddCourse', function (event) {
-  	$(this).parent().hide();
+  	debugger
+    $(this).parent().hide();
     $(this).parents('.ast-container').css('background-color', 'white');
+    $('.elementor-location-header').hide();
     $('#organization_2').hide();
     groupId = $(event.target).parents('.existGroup').data('groupid');
     elem = $(this).attr('class');
@@ -969,7 +972,7 @@ jQuery(document).ready(function ($) {
           break;
         }
         case 'organization_5': {
-          delCookie(`shopping_offline_${user_id}_${groupId}_`);
+          // delCookie(`shopping_offline_${user_id}_${groupId}_`);
           saveCoursesDetails(groupId);
           break;
         }
@@ -1129,13 +1132,18 @@ jQuery(document).ready(function ($) {
   }
 
   $(document).on('click', '#organization_6 .pay-and-downloads', function (event) {
+    debugger
+    event.preventDefault();
     groupId = $(this).data('groupid');
     saveOrganizationDetailsInCookie();
     for (const groupId of groupList) {
-      deleteNewStudentsFlag(groupId);
+      if (groupId == 0) continue; //delete
+      // deleteNewStudentsFlag(groupId);
       saveSelectedCoursesInCookie(groupId);
       saveCoursesDetailsInCookie(groupId);
     }
+    debugger
+    window.location.href = $(this).find('a').attr('href');
   });
 
   function saveOrganizationDetailsInCookie() {
@@ -1173,6 +1181,7 @@ jQuery(document).ready(function ($) {
   }
 
   function saveCoursesDetailsInCookie(groupId) {
+    debugger
     allCourses = groupsObj[groupId]['courses']['all'];
     adaptedCourses = groupsObj[groupId]['courses']['adapted'];
     cookieValue = {
@@ -1301,7 +1310,7 @@ jQuery(document).ready(function ($) {
   }
 
   function isPayment(groupId){
-    debugger
+    // debugger
     return groupsObj[groupId]['payment'];
     // return (typeof(groupsObj[groupId]) != 'undefined' && groupsObj[groupId]['payment']);
   }
@@ -1443,7 +1452,7 @@ jQuery(document).ready(function ($) {
 
   function deleteCookies() {
     const cookies = document.cookie.split(';');
-    cookies.forEach(function(cookie) {
+    cookies.forEach(function(cookie){
       const cookieName = cookie.split('=')[0].trim();              
       if (cookieName.includes('shopping_offline_') || cookieName.includes('offline_organization_details_') ||
           cookieName.includes('offline_group_')) {
