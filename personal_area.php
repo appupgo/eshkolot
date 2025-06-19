@@ -159,6 +159,7 @@ function personal_area(){
 		var index = '.($html_all_child_obj["html"] == '' ? 0:-1).'
 		var url = "'.( ($user_type == 'private')?'/%D7%90%D7%A9%D7%9B%D7%95%D7%9C%D7%95%D7%AA-%D7%90%D7%95%D7%A4%D7%9C%D7%99%D7%99%D7%9F/':'/%D7%90%D7%A9%D7%9B%D7%95%D7%9C%D7%95%D7%AA-%D7%90%D7%95%D7%A4%D7%9C%D7%99%D7%99%D7%9F-%D7%9C%D7%9E%D7%95%D7%A1%D7%93%D7%95%D7%AA/').'"
 		index = index == -1? jQuery(this).is(jQuery(".courses"))? 3:2:index
+		if (index == -1) index = 0;
     	window.open(url+"?index="+index);
   	});
 	</script>';
@@ -176,12 +177,26 @@ function personal_area(){
 
 function get_html_all_child($user_type) {
     $html = '';
-	$group_name = ($user_type == 'organization') ? get_group_name() : '';
+	// $group_name = ($user_type == 'organization') ? get_group_name() : '';???????
+
 	$all_child = ($user_type == 'private') ? get_children_for_parent(get_current_user_id()) : get_students_ids($group_name);
+
+//del:
+wp_mail('gittygimi@gmail.com', 'all_child', print_r($all_child, true), array('Content-Type: text/html; charset=UTF-8'));
+//
+
+
 	$i = 0;
 	$users_object = get_users_object($all_child);
+
+	//del:
+wp_mail('gittygimi@gmail.com', 'users_object', print_r($users_object, true), array('Content-Type: text/html; charset=UTF-8'));
+//
+
+
     $isCourses = false;
 	foreach($users_object as $child){
+			
 		$child_id = $child['id'];
 		$child_object = get_userdata($child_id);
 		$ID = $child['tz'];
