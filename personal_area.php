@@ -177,26 +177,11 @@ function personal_area(){
 
 function get_html_all_child($user_type) {
     $html = '';
-	// $group_name = ($user_type == 'organization') ? get_group_name() : '';???????
-
-	$all_child = ($user_type == 'private') ? get_children_for_parent(get_current_user_id()) : get_students_ids($group_name);
-
-//del:
-wp_mail('gittygimi@gmail.com', 'all_child', print_r($all_child, true), array('Content-Type: text/html; charset=UTF-8'));
-//
-
-
+	$all_child = ($user_type == 'private') ? get_children_for_parent(get_current_user_id()) : get_students_ids();
 	$i = 0;
-	$users_object = get_users_object($all_child);
-
-	//del:
-wp_mail('gittygimi@gmail.com', 'users_object', print_r($users_object, true), array('Content-Type: text/html; charset=UTF-8'));
-//
-
-
+	$users_object = get_users_object($all_child, $user_type);
     $isCourses = false;
 	foreach($users_object as $child){
-			
 		$child_id = $child['id'];
 		$child_object = get_userdata($child_id);
 		$ID = $child['tz'];
@@ -285,17 +270,11 @@ function get_userCourse($course_id, $UserCourse){
 	return null;
 }
 
+//delete
 function get_group_name(){
-	// Get the current page's URL
 	$currentURL = "http://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
-
-	// Get the path part of the URL
 	$path = parse_url($currentURL, PHP_URL_PATH);
-
-	// Get the end of the URL (slug)
 	$endOfURL = basename($path);
-
-	// Output the end of the URL
 	echo $endOfURL;
 }
 
@@ -318,11 +297,16 @@ function get_children_for_parent($id_parent){
 	return $all_child;
 }
 
-function get_students_ids($group_name){
+function get_students_ids() {
+	$students_ids = [];
 	$user_id = get_current_user_id();
-	$data = get_user_meta($user_id, 'groups', true);
-	$groups = unserialize($data[0]);
-	return $groups[$group_name]['students_ids'];
+	$groups = get_user_meta($user_id, 'groups', true);
+	foreach ($groups as $group) {
+		foreach ($group['students_ids'] as $id) {
+			array_push($students_ids, $id);
+		}
+	}
+	return $students_ids;
 }
 
 function year_to_he(){
@@ -670,8 +654,10 @@ $questionCompleted = array();
 
 function update_user_data( $request ) {
 	$idUser = $request->get_param( 'id_user' );
+	$user_type = 'private'; //change!!!!!!!!!!!!!
+	// או לשלוח כפרמטר את המזהה של ההורה/מנהל ארגון, או לשלוף כאן את המזהה של ההורה
 	update_user_completed($idUser, $request->get_param( 'coursesCompleted' ), $request->get_param( 'subjectCompleted' ), $request->get_param( 'questionCompleted' ), $request->get_param( 'lessonCompleted' ), $request->get_param('percentages'));
-	return get_users_object(array($idUser))[0];
+	return get_users_object(array($idUser), $user_type)[0];
 }
 
 function update_user_completed($idUser, $coursesCompleted, $subjectCompleted, $questionCompleted, $lessonCompleted, $percentages){
@@ -884,7 +870,8 @@ function get_courses_ids_for_learn_path_api($data) {
 }
 
 function download_software($users_ids, $user_id){
-	$users_download = get_users_object($users_ids);
+	$user_type = get_user_meta($user_id, 'user_type')[0];
+	$users_download = get_users_object($users_ids, $user_type);
 	$object_ids_for_all_users = get_all_ids_by_users($users_ids);
 	$knowledge_object = get_knowledges_object($object_ids_for_all_users['knowledges']);
 	$learn_path_object = get_learn_path_object($object_ids_for_all_users['path_ids']);
@@ -934,10 +921,8 @@ function sanitize_filenames(&$data) {
     }
 }
 
-function get_users_object($users_ids) {
-
+function get_users_object($users_ids, $user_type) {
 	$users_download = array();
-
 	foreach($users_ids as $id_user){
 		$knowledgeIds_user = array();
 		$path_ids_user = array();
@@ -947,12 +932,15 @@ function get_users_object($users_ids) {
 		$questionCompleted = array();
 		$lessonCompleted = array();
 		$user = get_userdata($id_user);
-		$products = get_user_meta($id_user, 'product_offline')[0];		
-
+		if ($user_type == 'private') {
+			$products = get_user_meta($id_user, 'product_offline')[0];
+		}
+		else {
+			$products = get_user_meta($id_user, 'product_offline_organization')[0];
+		}
 		foreach ($products as $product) {
 			$id_prod = $product['id'];
 			$details_prod = get_courses_and_paths_product($id_prod);
-
 			$courses_ids = array_merge_unique($courses_ids, $details_prod["courses_ids"]);
 			$path_ids_user = array_merge_unique($path_ids, $details_prod["path_ids"]);
 			$path_ids = array_merge_unique($path_ids, $details_prod["path_ids"]);
