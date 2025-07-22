@@ -8,6 +8,8 @@
  * Author URI: ''
  */
 
+// add_filter( 'redirect_canonical', '__return_false' );
+
 defined('ABSPATH') or die('No script kiddies please!');
 $groups_obj = array();
 $group_list = array();
@@ -51,7 +53,8 @@ function organization($atts)
 function get_frame_index()
 {
   $index = $_GET['index'];
-  return $index ? number_format($index) : 1;
+  return $index ? 2 : 1;
+  // return $index ? number_format($index) : 1; //delete???
 }
 
 function organization_1()
@@ -110,7 +113,7 @@ function organization_1()
     </div>
     <button class="next" data-event="groups" disabled>ליצירת קבוצות למידה ←</button>
   </div>
-</div>';
+  </div>';
   return $res;
 }
 function organization_2()
@@ -311,6 +314,9 @@ function organization_5()
   $knowledge_space_lst .= '<dt class="dt-course-header">' . polygon() . '<span>קורסים</span></dt>';
   foreach ($course_metadata as $key => $value) {
     if (!empty($value)) {
+      usort($value, function($a, $b) {
+        return $a[3] <=> $b[3];
+      });
       $style = ($display_index <= 6) ? 'display: block' : 'display: none';
       $knowledge_space_lst .= '<dl>
         <dt style="' . $style . '" data-id="course-id-' . $index . '" class="dt-course-sub-header">' . polygon() . '<span>' . $key . '</span></dt><dl>';
@@ -461,9 +467,9 @@ function exist_groups()
     $ages = $general_details->ages;
     $students = (object) $groups[$key]['students'];
     $group_count = count(get_object_vars($students));
-    $courses = $groups[$key]['paidCourses'];
+    $paid_courses = $groups[$key]['paidCourses'];
     $html .= create_group($group_id, $group_name, $group_count, $gender_text);
-    set_groups_obj($group_id, $students, $courses, $group_name, $gender, $ages);
+    set_groups_obj($group_id, $students, $paid_courses, $group_name, $gender, $ages);
     array_push($group_list, $group_id);
     $group_id++;
   }
@@ -528,16 +534,17 @@ function get_gender_text($gender){
   else return 'תלמידים/ות';
 }
 
-function set_groups_obj($group_id, $students, $courses, $group_name, $gender, $ages){
+function set_groups_obj($group_id, $students, $paid_courses, $group_name, $gender, $ages){
   global $groups_obj;
 	$groups_obj[$group_id]['payment'] = true;
   $groups_obj[$group_id]['students'] = $students;
-  $groups_obj[$group_id]['paidCourses']['all'] = $courses['all'];
-  $groups_obj[$group_id]['paidCourses']['adapted'] = $courses['adapted'];
+  $groups_obj[$group_id]['paidCourses']['all'] = $paid_courses['all'];
+  $groups_obj[$group_id]['paidCourses']['adapted'] = $paid_courses['adapted'];
   $groups_obj[$group_id]['groupName'] = $group_name;
   $groups_obj[$group_id]['gender'] = $gender;
   $groups_obj[$group_id]['ages'] = $ages;
   $groups_obj[$group_id]['courses']['all'] = [];
+  $groups_obj[$group_id]['courses']['adapted'] = [];
   foreach($students as $id => $val) {
     $groups_obj[$group_id]['courses']['adapted'][$id]['all'] = []; 
     $groups_obj[$group_id]['courses']['adapted'][$id]['private'] = []; 
